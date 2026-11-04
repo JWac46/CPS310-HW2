@@ -122,4 +122,89 @@ def test_save_empty_inventory(tmp_path):
     # Assert
     assert filename.read_text(encoding="utf-8") == ""
 
+# -------------------------------
+# 3. Search Tests
+# -------------------------------
+
+def test_exact_search(sample_inventory):
+    # Arrange
+    search_term = "Keyboard"
+
+    # Act
+    results = find_matching_items(sample_inventory, search_term)
+
+    # Assert
+    assert len(results) == 1
+    assert results[0]["name"] == "Keyboard"
+
+
+def test_partial_case_insensitive_search(sample_inventory):
+    # Arrange
+    search_term = "key"
+
+    # Act
+    results = find_matching_items(sample_inventory, search_term)
+
+    # Assert
+    assert len(results) == 1
+    assert results[0]["name"] == "Keyboard"
+
+
+def test_search_no_matches_or_empty(sample_inventory):
+    # Arrange
+    no_match = "Monitor"
+    empty_search = "   "
+
+    # Act
+    no_results = find_matching_items(sample_inventory, no_match)
+    empty_results = find_matching_items(sample_inventory, empty_search)
+
+    # Assert
+    assert no_results == []
+    assert empty_results == []
+
+
+# -------------------------------
+# 4. Remove Tests
+# -------------------------------
+
+@pytest.mark.parametrize(
+    "item_number, expected_name, expected_length",
+    [
+        (1, "Keyboard", 3),
+        (2, "Mouse", 3),
+        (4, "Pencil", 3)
+    ],
+    ids=["remove-first", "remove-middle", "remove-last"]
+)
+def test_remove_item(sample_inventory, item_number, expected_name,
+                     expected_length):
+    # Arrange
+    original_length = len(sample_inventory)
+
+    # Act
+    removed = remove_item_by_number(sample_inventory, item_number)
+
+    # Assert
+    assert removed["name"] == expected_name
+    assert len(sample_inventory) == expected_length
+    assert len(sample_inventory) == original_length - 1
+    assert all(
+        item["name"] != expected_name for item in sample_inventory
+    )
+
+
+def test_remove_invalid_numbers(sample_inventory):
+    # Arrange
+    original = [item.copy() for item in sample_inventory]
+
+    # Act
+    results = [
+        remove_item_by_number(sample_inventory, number)
+        for number in [0, -1, 5]
+    ]
+
+    # Assert
+    assert results == [None, None, None]
+    assert sample_inventory == original
 
