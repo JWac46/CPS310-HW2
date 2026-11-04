@@ -208,3 +208,113 @@ def test_remove_invalid_numbers(sample_inventory):
     assert results == [None, None, None]
     assert sample_inventory == original
 
+# -------------------------------
+# 5. Update Tests
+# -------------------------------
+
+def test_update_quantity(sample_inventory):
+    # Arrange
+    new_quantity = "20"
+
+    # Act
+    result = update_item_quantity(sample_inventory, 1, new_quantity)
+
+    # Assert
+    assert result is True
+    assert sample_inventory[0]["quantity"] == 20
+    assert sample_inventory[1]["quantity"] == 4
+
+
+def test_update_quantity_to_zero(sample_inventory):
+    # Arrange
+    new_quantity = "0"
+
+    # Act
+    result = update_item_quantity(sample_inventory, 1, new_quantity)
+
+    # Assert
+    assert result is True
+    assert sample_inventory[0]["quantity"] == 0
+
+
+def test_update_invalid_values(sample_inventory):
+    # Arrange
+    original = [item.copy() for item in sample_inventory]
+
+    # Act
+    invalid_item = update_item_quantity(sample_inventory, 0, "10")
+    too_large_item = update_item_quantity(sample_inventory, 5, "10")
+    negative_quantity = update_item_quantity(sample_inventory, 1, "-5")
+
+    # Assert
+    assert invalid_item is False
+    assert too_large_item is False
+    assert negative_quantity is False
+    assert sample_inventory == original
+
+
+# -------------------------------
+# 6. Add Validation Tests
+# -------------------------------
+
+def test_valid_new_item(sample_inventory):
+    # Arrange
+    name = "Monitor"
+    category = "Electronics"
+    quantity = "8"
+
+    # Act
+    result = validate_new_item(sample_inventory, name, category, quantity)
+
+    # Assert
+    assert result is None
+
+
+@pytest.mark.parametrize(
+    "name, category, quantity",
+    [
+        ("", "Electronics", "5"),
+        ("Monitor", "", "5"),
+        ("Mon|itor", "Electronics", "5"),
+        ("Monitor", "Elec|tronics", "5"),
+        ("Monitor", "Electronics", "-5"),
+        ("Monitor", "Electronics", "abc"),
+    ],
+    ids=[
+        "empty-name",
+        "empty-category",
+        "pipe-in-name",
+        "pipe-in-category",
+        "negative-quantity",
+        "nonnumeric-quantity"
+    ]
+)
+def test_invalid_new_item(sample_inventory, name, category, quantity):
+    # Arrange
+    original_length = len(sample_inventory)
+
+    # Act
+    result = validate_new_item(sample_inventory, name, category, quantity)
+
+    # Assert
+    assert result is not None
+    assert len(sample_inventory) == original_length
+
+
+def test_duplicate_item_names(sample_inventory):
+    # Arrange
+    existing_name = "Keyboard"
+    different_capitalization = "KEYBOARD"
+
+    # Act
+    result1 = validate_new_item(
+        sample_inventory, existing_name, "Electronics", "5"
+    )
+    result2 = validate_new_item(
+        sample_inventory, different_capitalization, "Electronics", "5"
+    )
+
+    # Assert
+    assert result1 is not None
+    assert result2 is not None
+
