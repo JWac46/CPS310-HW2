@@ -1,21 +1,8 @@
-"""CPS 310 - Homework 1: Inventory Manager
-Instructor solution checkpoint.
-"""
+
+"""CPS 310 - Homework 2: Inventory Manager"""
 
 INVENTORY_FILE = "inventory.txt"
 LOW_STOCK_THRESHOLD = 5
-
-
-def display_menu():
-    """Display the main Inventory Manager menu."""
-    print("\nInventory Manager")
-    print("1. View inventory")
-    print("2. Add an item")
-    print("3. Update an item quantity")
-    print("4. Remove an item")
-    print("5. Search inventory")
-    print("6. View inventory summary")
-    print("7. Exit")
 
 
 def load_inventory(filename):
@@ -30,13 +17,11 @@ def load_inventory(filename):
                     continue
 
                 name, category, quantity = line.split("|")
-                inventory.append(
-                    {
-                        "name": name,
-                        "category": category,
-                        "quantity": int(quantity),
-                    }
-                )
+                inventory.append({
+                    "name": name,
+                    "category": category,
+                    "quantity": int(quantity)
+                })
     except FileNotFoundError:
         return []
 
@@ -44,16 +29,131 @@ def load_inventory(filename):
 
 
 def save_inventory(inventory, filename):
-    """Save the complete inventory to a pipe-delimited text file."""
+    """Save inventory records to a text file."""
     with open(filename, "w", encoding="utf-8") as file:
         for item in inventory:
             file.write(
-                f'{item["name"]}|{item["category"]}|{item["quantity"]}\n'
+                f'{item["name"]}|{item["category"]}|'
+                f'{item["quantity"]}\n'
             )
 
 
+def validate_new_item(inventory, name, category, quantity):
+    """Validate information for a new inventory item."""
+    name = name.strip()
+    category = category.strip()
+
+    if not name:
+        return "Item name cannot be empty."
+    if "|" in name:
+        return "Item name may not contain the | character."
+    if not category:
+        return "Category cannot be empty."
+    if "|" in category:
+        return "Category may not contain the | character."
+    if not quantity.isdigit():
+        return "Quantity must be a nonnegative whole number."
+
+    for item in inventory:
+        if item["name"].lower() == name.lower():
+            return "An item with that name already exists."
+
+    return None
+
+
+def add_item_to_inventory(inventory, name, category, quantity):
+    """Validate and add an item to inventory."""
+    error = validate_new_item(inventory, name, category, quantity)
+
+    if error:
+        return False, error
+
+    inventory.append({
+        "name": name.strip(),
+        "category": category.strip(),
+        "quantity": int(quantity)
+    })
+
+    return True, "Item added successfully."
+
+
+def find_matching_items(inventory, search_term):
+    """Return inventory items matching a search term."""
+    if not search_term.strip():
+        return []
+
+    return [
+        item for item in inventory
+        if search_term.lower() in item["name"].lower()
+    ]
+
+
+def remove_item_by_number(inventory, item_number):
+    """Remove an item using its numbered position."""
+    if not isinstance(item_number, int) or isinstance(item_number, bool):
+        return None
+
+    if item_number < 1 or item_number > len(inventory):
+        return None
+
+    return inventory.pop(item_number - 1)
+
+
+def update_item_quantity(inventory, item_number, new_quantity):
+    """Update the quantity of an inventory item."""
+    if not isinstance(item_number, int) or isinstance(item_number, bool):
+        return False
+
+    if item_number < 1 or item_number > len(inventory):
+        return False
+
+    if not str(new_quantity).isdigit():
+        return False
+
+    inventory[item_number - 1]["quantity"] = int(new_quantity)
+    return True
+
+
+def calculate_summary(inventory):
+    """Calculate inventory summary information."""
+    category_counts = {}
+
+    for item in inventory:
+        category = item["category"].lower()
+
+        if category not in category_counts:
+            category_counts[category] = {
+                "name": item["category"],
+                "count": 0
+            }
+
+        category_counts[category]["count"] += 1
+
+    return {
+        "unique_items": len(inventory),
+        "total_quantity": sum(item["quantity"] for item in inventory),
+        "low_stock_items": sum(
+            1 for item in inventory
+            if item["quantity"] < LOW_STOCK_THRESHOLD
+        ),
+        "category_counts": category_counts
+    }
+
+
+def display_menu():
+    """Display the main menu."""
+    print("\nInventory Manager")
+    print("1. View inventory")
+    print("2. Add an item")
+    print("3. Update an item quantity")
+    print("4. Remove an item")
+    print("5. Search inventory")
+    print("6. View inventory summary")
+    print("7. Exit")
+
+
 def view_inventory(inventory):
-    """Display all inventory items in a numbered list."""
+    """Display all inventory items."""
     if not inventory:
         print("No inventory items found.")
         return
@@ -67,101 +167,86 @@ def view_inventory(inventory):
 
 
 def add_item(inventory):
-    """Prompt for and add one validated inventory item, then save it."""
-    name = input("Enter the item name: ").strip()
-    if not name:
-        print("Item name cannot be empty.")
-        return
-    if "|" in name:
-        print("Item name may not contain the | character.")
-        return
+    """Collect information and add an inventory item."""
+    name = input("Enter the item name: ")
+    category = input("Enter the category: ")
+    quantity = input("Enter the quantity: ").strip()
 
-    for item in inventory:
-        if item["name"].lower() == name.lower():
-            print("An item with that name already exists.")
-            return
+    success, message = add_item_to_inventory(
+        inventory, name, category, quantity
+    )
 
-    category = input("Enter the category: ").strip()
-    if not category:
-        print("Category cannot be empty.")
-        return
-    if "|" in category:
-        print("Category may not contain the | character.")
-        return
+    if success:
+        save_inventory(inventory, INVENTORY_FILE)
 
-    quantity_text = input("Enter the quantity: ").strip()
-    if not quantity_text.isdigit():
-        print("Quantity must be a nonnegative whole number.")
-        return
-
-    quantity = int(quantity_text)
-    inventory.append({"name": name, "category": category, "quantity": quantity})
-    save_inventory(inventory, INVENTORY_FILE)
-    print("Item added successfully.")
+    print(message)
 
 
 def update_quantity(inventory):
-    """Prompt for an item number and replace its quantity, then save it."""
+    """Collect information and update an item's quantity."""
     if not inventory:
         print("No inventory items found.")
         return
 
     view_inventory(inventory)
+
     selection_text = input("Enter the item number to update: ").strip()
+
     if not selection_text.isdigit():
         print("Item number must be a valid whole number.")
         return
 
     selection = int(selection_text)
+
     if selection < 1 or selection > len(inventory):
         print("Item number is outside the available range.")
         return
 
     quantity_text = input("Enter the new quantity: ").strip()
-    if not quantity_text.isdigit():
+
+    if not update_item_quantity(inventory, selection, quantity_text):
         print("Quantity must be a nonnegative whole number.")
         return
 
-    quantity = int(quantity_text)
-    item = inventory[selection - 1]
-    item["quantity"] = quantity
     save_inventory(inventory, INVENTORY_FILE)
-    print(f'{item["name"]} quantity updated to {quantity}.')
+    print(f'{inventory[selection - 1]["name"]} quantity updated.')
 
 
 def remove_item(inventory):
-    """Prompt for an item number, remove that item, then save the inventory."""
+    """Collect information and remove an inventory item."""
     if not inventory:
         print("No inventory items found.")
         return
 
     view_inventory(inventory)
+
     selection_text = input("Enter the item number to remove: ").strip()
+
     if not selection_text.isdigit():
         print("Item number must be a valid whole number.")
         return
 
-    selection = int(selection_text)
-    if selection < 1 or selection > len(inventory):
+    removed_item = remove_item_by_number(
+        inventory, int(selection_text)
+    )
+
+    if removed_item is None:
         print("Item number is outside the available range.")
         return
 
-    removed_item = inventory.pop(selection - 1)
     save_inventory(inventory, INVENTORY_FILE)
     print(f'Item removed: {removed_item["name"]}')
 
 
 def search_inventory(inventory):
-    """Prompt for an item-name search term and display matching items."""
+    """Collect a search term and display matching items."""
     search_term = input("Enter part or all of an item name: ").strip()
+
     if not search_term:
         print("Search term cannot be empty.")
         return
 
-    matches = []
-    for item in inventory:
-        if search_term.lower() in item["name"].lower():
-            matches.append(item)
+    matches = find_matching_items(inventory, search_term)
 
     if not matches:
         print("No inventory items matched your search.")
@@ -176,37 +261,22 @@ def search_inventory(inventory):
 
 
 def display_summary(inventory):
-    """Calculate and display inventory summary information."""
-    unique_items = len(inventory)
-    total_quantity = 0
-    low_stock_items = 0
-    category_counts = {}
-    category_labels = {}
-
-    for item in inventory:
-        total_quantity += item["quantity"]
-
-        if item["quantity"] < LOW_STOCK_THRESHOLD:
-            low_stock_items += 1
-
-        category_key = item["category"].lower()
-        if category_key not in category_counts:
-            category_counts[category_key] = 0
-            category_labels[category_key] = item["category"]
-        category_counts[category_key] += 1
+    """Display calculated inventory summary information."""
+    summary = calculate_summary(inventory)
 
     print("\nInventory Summary")
-    print(f"Unique items: {unique_items}")
-    print(f"Total quantity: {total_quantity}")
-    print(f"Low-stock items: {low_stock_items}")
+    print(f'Unique items: {summary["unique_items"]}')
+    print(f'Total quantity: {summary["total_quantity"]}')
+    print(f'Low-stock items: {summary["low_stock_items"]}')
+
     print("\nItems by category:")
 
-    if not category_counts:
+    if not summary["category_counts"]:
         print("No categories found.")
         return
 
-    for category_key, count in category_counts.items():
-        print(f"{category_labels[category_key]}: {count}")
+    for category in summary["category_counts"].values():
+        print(f'{category["name"]}: {category["count"]}')
 
 
 def main():
