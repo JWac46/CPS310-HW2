@@ -318,3 +318,83 @@ def test_duplicate_item_names(sample_inventory):
     assert result1 is not None
     assert result2 is not None
 
+# -------------------------------
+# 7. Summary Tests
+# -------------------------------
+
+def test_summary_totals(sample_inventory):
+    # Arrange
+    expected_items = 4
+    expected_quantity = 21
+    expected_low_stock = 2
+
+    # Act
+    summary = calculate_summary(sample_inventory)
+
+    # Assert
+    assert summary["unique_items"] == expected_items
+    assert summary["total_quantity"] == expected_quantity
+    assert summary["low_stock_items"] == expected_low_stock
+
+
+def test_summary_category_counts(sample_inventory):
+    # Arrange
+    expected_electronics = 2
+    expected_school = 2
+
+    # Act
+    summary = calculate_summary(sample_inventory)
+
+    # Assert
+    assert summary["category_counts"]["electronics"]["count"] == expected_electronics
+    assert summary["category_counts"]["school"]["count"] == expected_school
+
+
+def test_summary_ignores_category_capitalization():
+    # Arrange
+    inventory = [
+        {"name": "Keyboard", "category": "Electronics", "quantity": 10},
+        {"name": "Mouse", "category": "electronics", "quantity": 5}
+    ]
+
+    # Act
+    summary = calculate_summary(inventory)
+
+    # Assert
+    assert summary["category_counts"]["electronics"]["count"] == 2
+
+
+def test_empty_summary():
+    # Arrange
+    inventory = []
+
+    # Act
+    summary = calculate_summary(inventory)
+
+    # Assert
+    assert summary["unique_items"] == 0
+    assert summary["total_quantity"] == 0
+    assert summary["low_stock_items"] == 0
+    assert summary["category_counts"] == {}
+
+
+# -------------------------------
+# Low Stock Boundary Test
+# -------------------------------
+
+@pytest.mark.parametrize(
+    "quantity, expected",
+    [(4, 1), (5, 0)],
+    ids=["below-threshold", "at-threshold"]
+)
+def test_low_stock_boundary(quantity, expected):
+    # Arrange
+    inventory = [
+        {"name": "Test", "category": "Test", "quantity": quantity}
+    ]
+
+    # Act
+    summary = calculate_summary(inventory)
+
+    # Assert
+    assert summary["low_stock_items"] == expected
