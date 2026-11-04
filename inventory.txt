@@ -1,0 +1,5 @@
+Laptop Charger|Electronics|8
+Printer Paper|Office Supplies|25
+Dry-Erase Markers|Classroom Supplies|4
+USB-C Cable|Electronics|12
+Sticky Notes|Office Supplies|3
